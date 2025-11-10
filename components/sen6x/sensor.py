@@ -1,4 +1,3 @@
-
 import esphome.codegen as cg
 import esphome.config_validation as cv
 from esphome.components import sensor, i2c
@@ -6,12 +5,12 @@ from esphome.const import (
     CONF_ID,
     DEVICE_CLASS_TEMPERATURE,
     DEVICE_CLASS_HUMIDITY,
-    DEVICE_CLASS_CO2,
     STATE_CLASS_MEASUREMENT,
     UNIT_CELSIUS,
     UNIT_PERCENT,
     UNIT_EMPTY,
 )
+from esphome.const import SensorDeviceClass  # ✅ neu für ESPHome ≥2024.7
 
 DEPENDENCIES = ["i2c"]
 
@@ -20,25 +19,38 @@ SEN6x = sen6x_ns.class_("SEN6x", cg.PollingComponent, i2c.I2CDevice)
 
 CONF_MODEL = "model"
 
-MODEL = cv.one_of("auto","SEN60","SEN63C","SEN65","SEN66","SEN68", lower=True)
+MODEL = cv.one_of("auto", "SEN60", "SEN63C", "SEN65", "SEN66", "SEN68", lower=True)
 
 def _simple_schema(unit=UNIT_EMPTY):
-    return sensor.sensor_schema(unit_of_measurement=unit, accuracy_decimals=2, state_class=STATE_CLASS_MEASUREMENT)
+    return sensor.sensor_schema(
+        unit_of_measurement=unit,
+        accuracy_decimals=2,
+        state_class=STATE_CLASS_MEASUREMENT,
+    )
 
 CONFIG_SCHEMA = (
     cv.Schema({
         cv.GenerateID(): cv.declare_id(SEN6x),
         cv.Optional(CONF_MODEL, default="auto"): MODEL,
-        cv.Optional("temperature"): sensor.sensor_schema(UNIT_CELSIUS, DEVICE_CLASS_TEMPERATURE, STATE_CLASS_MEASUREMENT),
-        cv.Optional("humidity"):    sensor.sensor_schema(UNIT_PERCENT, DEVICE_CLASS_HUMIDITY, STATE_CLASS_MEASUREMENT),
-        cv.Optional("co2"):         sensor.sensor_schema("ppm", DEVICE_CLASS_CO2, STATE_CLASS_MEASUREMENT),
-        cv.Optional("voc_index"):   _simple_schema("index"),
-        cv.Optional("nox_index"):   _simple_schema("index"),
-        cv.Optional("hcho"):        _simple_schema("ppb"),
-        cv.Optional("pm_1_0"):      _simple_schema("µg/m³"),
-        cv.Optional("pm_2_5"):      _simple_schema("µg/m³"),
-        cv.Optional("pm_4_0"):      _simple_schema("µg/m³"),
-        cv.Optional("pm_10_0"):     _simple_schema("µg/m³"),
+
+        cv.Optional("temperature"): sensor.sensor_schema(
+            UNIT_CELSIUS, DEVICE_CLASS_TEMPERATURE, STATE_CLASS_MEASUREMENT
+        ),
+        cv.Optional("humidity"): sensor.sensor_schema(
+            UNIT_PERCENT, DEVICE_CLASS_HUMIDITY, STATE_CLASS_MEASUREMENT
+        ),
+        cv.Optional("co2"): sensor.sensor_schema(
+            unit_of_measurement="ppm",
+            device_class=SensorDeviceClass.CO2,
+            state_class=STATE_CLASS_MEASUREMENT,
+        ),
+        cv.Optional("voc_index"): _simple_schema("index"),
+        cv.Optional("nox_index"): _simple_schema("index"),
+        cv.Optional("hcho"): _simple_schema("ppb"),
+        cv.Optional("pm_1_0"): _simple_schema("µg/m³"),
+        cv.Optional("pm_2_5"): _simple_schema("µg/m³"),
+        cv.Optional("pm_4_0"): _simple_schema("µg/m³"),
+        cv.Optional("pm_10_0"): _simple_schema("µg/m³"),
     })
     .extend(cv.polling_component_schema("10s"))
     .extend(i2c.i2c_device_schema(0x6B))
