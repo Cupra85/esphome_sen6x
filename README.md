@@ -52,31 +52,7 @@ external_components:
     # or: - source: components/sen6x        # when used locally
 
 sensor:
-  - platform: sen6x
-    i2c_id: bus_a
-    address: 0x6B       # 0x6B for SEN6x; 0x6C for SEN60
-    update_interval: 10s
-    model: "auto"       # or: "SEN60","SEN63C","SEN65","SEN66","SEN68"
-    temperature:
-      name: "Temperature"
-    humidity:
-      name: "Humidity"
-    co2:
-      name: "CO2"
-    voc_index:
-      name: "VOC Index"
-    nox_index:
-      name: "NOx Index"
-    hcho:
-      name: "HCHO"
-    pm_1_0:
-      name: "PM1.0"
-    pm_2_5:
-      name: "PM2.5"
-    pm_4_0:
-      name: "PM4.0"
-    pm_10_0:
-      name: "PM10"
+
 ```
 
 ## Notes
