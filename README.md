@@ -1,10 +1,10 @@
-# ESPHome Component for Sensirion SEN6x (SEN60–SEN68)
+# ESPHome Component for Sensirion SEN66
 
-Local external component for ESPHome (>= 2025.10.x) to read **Sensirion SEN6x** air‑quality sensors via I²C.
-Supports **SEN60, SEN63C, SEN65, SEN66, SEN68** with model auto/selection and publishes all signals
-available per model (PMx, T, RH, VOC, NOx, CO₂, HCHO – see table). Works with **ESP‑IDF** and **Arduino**.
+Local external component for ESPHome (>= 2025.10.x) to read **Sensirion SEN66** air‑quality sensors via I²C.
+Supports **only SEN66** and publishes all signals
+available per model (PMx, T, RH, VOC, NOx, CO₂, – see table). Works with **Arduino**.
 
-> This is a *local external component*: no internet required. Drop `components/sen6x` next to your YAML.
+> This is a *external component*.
 
 ## Model capability matrix
 | Model  | PM | RH/T | VOC | NOx | CO₂ | HCHO |
@@ -20,8 +20,8 @@ available per model (PMx, T, RH, VOC, NOx, CO₂, HCHO – see table). Works wit
 |-----:|------|----------|------|
 | GND  | Black| GND      | Ground |
 | VDD  | Red  | 3V3      | 3.3 V |
-| SDA  | Blue | GPIO6    | I²C data |
-| SCL  | Yellow | GPIO7  | I²C clock |
+| SDA  | Blue | GPIO10    | I²C data |
+| SCL  | Yellow | GPIO11  | I²C clock |
 
 ## Quick start (ESP‑IDF)
 ```yaml
@@ -31,7 +31,7 @@ esphome:
 esp32:
   board: esp32-c6-devkitc-1
   framework:
-    type: esp-idf
+    type: arduino
 
 wifi:
   ssid: !secret wifi_ssid
@@ -42,14 +42,13 @@ api:
 ota:
 
 i2c:
-  sda: GPIO6
-  scl: GPIO7
+  sda: GPIO10
+  scl: GPIO11
   id: bus_a
   scan: true
 
 external_components:
-  - source: github://Cupra85/esphome_sen6x  # after you push the repo
-    # or: - source: components/sen6x        # when used locally
+  - source: github://Cupra85/esphome_sen6x
 
 sensor:
 
