@@ -35,7 +35,7 @@ Der SEN66 erfasst gleich **mehrere Luftgüte-Aspekte gleichzeitig**:
 ✔️ stabiler Betrieb ohne Timeouts durch getaktete Abfragen  
 ✔️ Temperatur-Offset konfigurierbar (bei Stauwärme)
 
-📌 **Andere Modelle (SEN54/SEN55)** könnten teilweise funktionieren, sind aber **nicht unterstützt**.
+📌 **Andere Modelle (SEN63C-SEN68)** könnten teilweise funktionieren, sind aber **nicht geprüft**.
 
 ---
 
