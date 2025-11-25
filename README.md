@@ -35,6 +35,12 @@ Der SEN66 erfasst gleich **mehrere Luftgüte-Aspekte gleichzeitig**:
 
 ![Steuerelemente Beispiel](./examples/Steuerelemente.jpeg)
 
+<p align="center">
+  <img src="./examples/Sensoren.jpg" alt="Sensoren" width="45%">
+  <img src="./examples/Steuerelemente.jpg" alt="Steuerelemente" width="45%">
+</p>
+
+
 ---
 
 ## 🛠️ Funktionen dieser Firmware
