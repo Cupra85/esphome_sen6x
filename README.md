@@ -25,16 +25,15 @@ Der SEN66 erfasst gleich **mehrere Luftgüte-Aspekte gleichzeitig**:
 
 ---
 
-## 🏠 Warum überhaupt Luftqualität messen?
+## 🖼 Darstellung in ESPHome
 
-Viele Bewohner bemerken schlechte Luft nicht – **Kopfschmerzen, Müdigkeit oder schlechte Schlafqualität** werden oft Ursache für **schlechte CO₂-Werte, VOC oder hohe Staublast**.  
-Der SEN66 hilft z.B. bei:
+### 📊 Einzelne Messwerte (Sensor)
 
-🔹 Schimmelvermeidung durch Feuchtigkeit  
-🔹 Optimierung der Lüftung / Wohnraumlüftung  
-🔹 Automatischer Luftfiltersteuerung  
-🔹 Gesundheit in Raucher/Haushalten mit Gasherden  
-🔹 Schulräume, Büros, Schlafzimmer  
+![Sensoren Beispiel](examples/Sensoren.jpg)
+
+### 🕹️ Steuerung (Lüfterreinigung & Messung starten/stoppen)
+
+![Steuerelemente Beispiel](examples/Steuerelemente.jpg)
 
 ---
 
