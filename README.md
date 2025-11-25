@@ -31,8 +31,8 @@ Der SEN66 erfasst gleich **mehrere Luftgüte-Aspekte gleichzeitig**:
 ### 🕹️ Steuerung (Lüfterreinigung & Messung starten/stoppen)
 
 <p align="center">
-  <img src="./examples/Sensoren.jpeg" alt="Sensoren" width="45%">
-  <img src="./examples/Steuerelemente.jpeg" alt="Steuerelemente" width="45%">
+  <img src="./examples/Sensoren.jpeg" alt="Sensoren" width="20%">
+  <img src="./examples/Steuerelemente.jpeg" alt="Steuerelemente" width="20%">
 </p>
 
 
