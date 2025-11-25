@@ -34,60 +34,39 @@ from esphome.const import (
     UNIT_PERCENT,
 )
 
+# ---------- NEW Constant Names ----------
+CONF_NC_0_5 = "number_concentration_0_5"
+CONF_NC_1_0 = "number_concentration_1_0"
+CONF_NC_2_5 = "number_concentration_2_5"
+CONF_NC_4_0 = "number_concentration_4_0"
+CONF_NC_10_0 = "number_concentration_10_0"
+
+CONF_ALGORITHM_TUNING = "algorithm_tuning"
+
 CODEOWNERS = ["@martgras"]
 DEPENDENCIES = ["i2c"]
 AUTO_LOAD = ["sensirion_common"]
 
 sen6x_ns = cg.esphome_ns.namespace("sen6x")
-SEN5XComponent = sen6x_ns.class_(
-    "SEN5XComponent", cg.PollingComponent, sensirion_common.SensirionI2CDevice
-)
+SEN5XComponent = sen6x_ns.class_("SEN5XComponent", cg.PollingComponent, sensirion_common.SensirionI2CDevice)
 
-
-CONF_ALGORITHM_TUNING = "algorithm_tuning"
-CONF_GAIN_FACTOR = "gain_factor"
-CONF_GATING_MAX_DURATION_MINUTES = "gating_max_duration_minutes"
-CONF_INDEX_OFFSET = "index_offset"
-CONF_LEARNING_TIME_GAIN_HOURS = "learning_time_gain_hours"
-CONF_LEARNING_TIME_OFFSET_HOURS = "learning_time_offset_hours"
-CONF_NORMALIZED_OFFSET_SLOPE = "normalized_offset_slope"
-CONF_NOX = "nox"
-CONF_STD_INITIAL = "std_initial"
-CONF_TIME_CONSTANT = "time_constant"
-CONF_VOC = "voc"
-CONF_VOC_BASELINE = "voc_baseline"
-CONF_CO2 = "co2"
-
-
-# Actions
-StartMeasurementAction = sen6x_ns.class_("StartMeasurementAction", automation.Action)
-StopMeasurementAction = sen6x_ns.class_("StopMeasurementAction", automation.Action)
-StartFanAction = sen6x_ns.class_("StartFanAction", automation.Action)
-
-
-
+# ------------ Tuning Schema -------------
 GAS_SENSOR = cv.Schema(
     {
         cv.Optional(CONF_ALGORITHM_TUNING): cv.Schema(
             {
-                cv.Optional(CONF_INDEX_OFFSET, default=100): cv.int_range(1, 250),
-                cv.Optional(CONF_LEARNING_TIME_OFFSET_HOURS, default=12): cv.int_range(
-                    1, 1000
-                ),
-                cv.Optional(CONF_LEARNING_TIME_GAIN_HOURS, default=12): cv.int_range(
-                    1, 1000
-                ),
-                cv.Optional(
-                    CONF_GATING_MAX_DURATION_MINUTES, default=720
-                ): cv.int_range(0, 3000),
-                cv.Optional(CONF_STD_INITIAL, default=50): cv.int_,
-                cv.Optional(CONF_GAIN_FACTOR, default=230): cv.int_range(1, 1000),
+                cv.Optional("index_offset", default=100): cv.int_range(1, 250),
+                cv.Optional("learning_time_offset_hours", default=12): cv.int_range(1, 1000),
+                cv.Optional("learning_time_gain_hours", default=12): cv.int_range(1, 1000),
+                cv.Optional("gating_max_duration_minutes", default=720): cv.int_range(0, 3000),
+                cv.Optional("std_initial", default=50): cv.int_,
+                cv.Optional("gain_factor", default=230): cv.int_range(1, 1000),
             }
         )
     }
 )
 
-
+# ------------ Fix percentage trap -------------
 def float_previously_pct(value):
     if isinstance(value, str) and "%" in value:
         raise cv.Invalid(
@@ -95,11 +74,13 @@ def float_previously_pct(value):
         )
     return value
 
-
+# ------------ CONFIG SCHEMA -------------
 CONFIG_SCHEMA = (
     cv.Schema(
         {
             cv.GenerateID(): cv.declare_id(SEN5XComponent),
+
+            # ------- PM Sensors -------
             cv.Optional(CONF_PM_1_0): sensor.sensor_schema(
                 unit_of_measurement=UNIT_MICROGRAMS_PER_CUBIC_METER,
                 icon=ICON_CHEMICAL_WEAPON,
@@ -127,13 +108,15 @@ CONFIG_SCHEMA = (
                 device_class=DEVICE_CLASS_PM10,
                 state_class=STATE_CLASS_MEASUREMENT,
             ),
-            cv.Optional(CONF_VOC): sensor.sensor_schema(
+
+            # ------- VOC, NOx, CO2 -------
+            cv.Optional("voc"): sensor.sensor_schema(
                 icon=ICON_RADIATOR,
                 accuracy_decimals=0,
                 device_class=DEVICE_CLASS_AQI,
                 state_class=STATE_CLASS_MEASUREMENT,
             ).extend(GAS_SENSOR),
-            cv.Optional(CONF_NOX): sensor.sensor_schema(
+            cv.Optional("nox"): sensor.sensor_schema(
                 icon=ICON_RADIATOR,
                 accuracy_decimals=0,
                 device_class=DEVICE_CLASS_AQI,
@@ -146,8 +129,11 @@ CONFIG_SCHEMA = (
                 device_class=DEVICE_CLASS_CARBON_DIOXIDE,
                 state_class=STATE_CLASS_MEASUREMENT,
             ),
+
             cv.Optional(CONF_STORE_BASELINE, default=True): cv.boolean,
-            cv.Optional(CONF_VOC_BASELINE): cv.hex_uint16_t,
+            cv.Optional("voc_baseline"): cv.hex_uint16_t,
+
+            # ------- Temperature, Humidity -------
             cv.Optional(CONF_TEMPERATURE): sensor.sensor_schema(
                 unit_of_measurement=UNIT_CELSIUS,
                 icon=ICON_THERMOMETER,
@@ -162,111 +148,80 @@ CONFIG_SCHEMA = (
                 device_class=DEVICE_CLASS_HUMIDITY,
                 state_class=STATE_CLASS_MEASUREMENT,
             ),
+
+            # ------- Compensation -------
             cv.Optional(CONF_TEMPERATURE_COMPENSATION): cv.Schema(
                 {
                     cv.Optional(CONF_OFFSET, default=0): cv.float_,
-                    cv.Optional(CONF_NORMALIZED_OFFSET_SLOPE, default=0): cv.All(
-                        float_previously_pct, cv.float_
-                    ),
-                    cv.Optional(CONF_TIME_CONSTANT, default=0): cv.int_,
+                    cv.Optional("normalized_offset_slope", default=0): cv.All(float_previously_pct, cv.float_),
+                    cv.Optional("time_constant", default=0): cv.int_,
                 }
-            )
+            ),
+
+            # ------- NEW → Number concentration sensors -------
+            cv.Optional(CONF_NC_0_5): sensor.sensor_schema(unit_of_measurement="p/cm³", icon="mdi:counter", accuracy_decimals=0),
+            cv.Optional(CONF_NC_1_0): sensor.sensor_schema(unit_of_measurement="p/cm³", icon="mdi:counter", accuracy_decimals=0),
+            cv.Optional(CONF_NC_2_5): sensor.sensor_schema(unit_of_measurement="p/cm³", icon="mdi:counter", accuracy_decimals=0),
+            cv.Optional(CONF_NC_4_0): sensor.sensor_schema(unit_of_measurement="p/cm³", icon="mdi:counter", accuracy_decimals=0),
+            cv.Optional(CONF_NC_10_0): sensor.sensor_schema(unit_of_measurement="p/cm³", icon="mdi:counter", accuracy_decimals=0),
         }
     )
     .extend(cv.polling_component_schema("60s"))
     .extend(i2c.i2c_device_schema(0x6B))
 )
 
+# ------------ Map PM, VOC, NOx etc. -------------
 SENSOR_MAP = {
     CONF_PM_1_0: "set_pm_1_0_sensor",
     CONF_PM_2_5: "set_pm_2_5_sensor",
     CONF_PM_4_0: "set_pm_4_0_sensor",
     CONF_PM_10_0: "set_pm_10_0_sensor",
-    CONF_VOC: "set_voc_sensor",
-    CONF_NOX: "set_nox_sensor",
+    "voc": "set_voc_sensor",
+    "nox": "set_nox_sensor",
     CONF_TEMPERATURE: "set_temperature_sensor",
     CONF_HUMIDITY: "set_humidity_sensor",
     CONF_CO2: "set_co2_sensor",
 }
-
-SETTING_MAP = {
-    
-}
-
 
 async def to_code(config):
     var = cg.new_Pvariable(config[CONF_ID])
     await cg.register_component(var, config)
     await i2c.register_i2c_device(var, config)
 
-    for key, funcName in SETTING_MAP.items():
+    # Map standard sensors
+    for key, func in SENSOR_MAP.items():
         if key in config:
-            cg.add(getattr(var, funcName)(config[key]))
+            cg.add(getattr(var, func)(await sensor.new_sensor(config[key])))
 
-    for key, funcName in SENSOR_MAP.items():
-        if key in config:
-            sens = await sensor.new_sensor(config[key])
-            cg.add(getattr(var, funcName)(sens))
+    # Map number concentration sensors
+    for (cfg, func) in [
+        (CONF_NC_0_5, "set_nc_0_5_sensor"),
+        (CONF_NC_1_0, "set_nc_1_0_sensor"),
+        (CONF_NC_2_5, "set_nc_2_5_sensor"),
+        (CONF_NC_4_0, "set_nc_4_0_sensor"),
+        (CONF_NC_10_0, "set_nc_10_0_sensor"),
+    ]:
+        if cfg in config:
+            cg.add(getattr(var, func)(await sensor.new_sensor(config[cfg])))
 
-    if CONF_VOC in config and CONF_ALGORITHM_TUNING in config[CONF_VOC]:
-        cfg = config[CONF_VOC][CONF_ALGORITHM_TUNING]
-        cg.add(
-            var.set_voc_algorithm_tuning(
-                cfg[CONF_INDEX_OFFSET],
-                cfg[CONF_LEARNING_TIME_OFFSET_HOURS],
-                cfg[CONF_LEARNING_TIME_GAIN_HOURS],
-                cfg[CONF_GATING_MAX_DURATION_MINUTES],
-                cfg[CONF_STD_INITIAL],
-                cfg[CONF_GAIN_FACTOR],
-            )
-        )
-    if CONF_NOX in config and CONF_ALGORITHM_TUNING in config[CONF_NOX]:
-        cfg = config[CONF_NOX][CONF_ALGORITHM_TUNING]
-        cg.add(
-            var.set_nox_algorithm_tuning(
-                cfg[CONF_INDEX_OFFSET],
-                cfg[CONF_LEARNING_TIME_OFFSET_HOURS],
-                cfg[CONF_LEARNING_TIME_GAIN_HOURS],
-                cfg[CONF_GATING_MAX_DURATION_MINUTES],
-                cfg[CONF_GAIN_FACTOR],
-            )
-        )
-    if CONF_TEMPERATURE_COMPENSATION in config:
-        cg.add(
-            var.set_temperature_compensation(
-                config[CONF_TEMPERATURE_COMPENSATION][CONF_OFFSET],
-                config[CONF_TEMPERATURE_COMPENSATION][CONF_NORMALIZED_OFFSET_SLOPE],
-                config[CONF_TEMPERATURE_COMPENSATION][CONF_TIME_CONSTANT],
-            )
-        )
+# ---- Actions ----
+StartMeasurementAction = sen6x_ns.class_("StartMeasurementAction", automation.Action)
+StopMeasurementAction = sen6x_ns.class_("StopMeasurementAction", automation.Action)
+StartFanAction = sen6x_ns.class_("StartFanAction", automation.Action)
 
+SEN5X_ACTION_SCHEMA = maybe_simple_id({cv.Required(CONF_ID): cv.use_id(SEN5XComponent)})
 
-SEN5X_ACTION_SCHEMA = maybe_simple_id(
-    {
-        cv.Required(CONF_ID): cv.use_id(SEN5XComponent),
-    }
-)
-
-# --- Start Measurement ---
-@automation.register_action(
-    "sen6x.start_measurement", StartMeasurementAction, SEN5X_ACTION_SCHEMA
-)
+@automation.register_action("sen6x.start_measurement", StartMeasurementAction, SEN5X_ACTION_SCHEMA)
 async def sen6x_start_to_code(config, action_id, template_arg, args):
     parent = await cg.get_variable(config[CONF_ID])
     return cg.new_Pvariable(action_id, template_arg, parent)
 
-# --- Stop Measurement ---
-@automation.register_action(
-    "sen6x.stop_measurement", StopMeasurementAction, SEN5X_ACTION_SCHEMA
-)
+@automation.register_action("sen6x.stop_measurement", StopMeasurementAction, SEN5X_ACTION_SCHEMA)
 async def sen6x_stop_to_code(config, action_id, template_arg, args):
     parent = await cg.get_variable(config[CONF_ID])
     return cg.new_Pvariable(action_id, template_arg, parent)
 
-# --- Fan Cleaning ---
-@automation.register_action(
-    "sen6x.start_fan_cleaning", StartFanAction, SEN5X_ACTION_SCHEMA
-)
-async def sen54_fan_to_code(config, action_id, template_arg, args):
-    paren = await cg.get_variable(config[CONF_ID])
-    return cg.new_Pvariable(action_id, template_arg, paren)
+@automation.register_action("sen6x.start_fan_cleaning", StartFanAction, SEN5X_ACTION_SCHEMA)
+async def sen6x_fan_to_code(config, action_id, template_arg, args):
+    parent = await cg.get_variable(config[CONF_ID])
+    return cg.new_Pvariable(action_id, template_arg, parent)
