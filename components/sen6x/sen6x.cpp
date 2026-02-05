@@ -185,4 +185,91 @@ void SEN5XComponent::update() {
 
     this->status_clear_warning();
 
-    // 🧮 Number Concentr
+    // 🧮 Number Concentration with Delay
+    this->set_timeout(50, [this]() {
+      uint16_t nc05_u, nc10_u, nc25_u, nc40_u, nc100_u;
+      if (!this->read_number_concentration(&nc05_u, &nc10_u, &nc25_u, &nc40_u, &nc100_u)) return;
+
+      auto conv = [](uint16_t v) -> float {
+        if (v == 0xFFFF) return NAN;
+        return (float) v;
+      };
+
+      if (this->nc_0_5_sensor_) this->nc_0_5_sensor_->publish_state(conv(nc05_u));
+      if (this->nc_1_0_sensor_) this->nc_1_0_sensor_->publish_state(conv(nc10_u));
+      if (this->nc_2_5_sensor_) this->nc_2_5_sensor_->publish_state(conv(nc25_u));
+      if (this->nc_4_0_sensor_) this->nc_4_0_sensor_->publish_state(conv(nc40_u));
+      if (this->nc_10_0_sensor_) this->nc_10_0_sensor_->publish_state(conv(nc100_u));
+    });
+
+  });
+}
+
+// -----------------------------------------------------------------------------
+//                          FUNKTIONEN
+// -----------------------------------------------------------------------------
+
+bool SEN5XComponent::read_number_concentration(uint16_t *nc05, uint16_t *nc10,
+                                               uint16_t *nc25, uint16_t *nc40,
+                                               uint16_t *nc100) {
+  uint16_t raw[5];
+
+  if (!this->write_command(SEN6X_CMD_READ_NUMBER_CONCENTRATION)) {
+    this->status_set_warning();
+    ESP_LOGE(TAG, "Error writing Number Concentration command (0x0316), err=%d", this->last_error_);
+    return false;
+  }
+
+  // Datenblatt: nach 0x0316 typischerweise ~20 ms warten, damit die Werte bereit sind.
+  // (Hier bewusst 200 ms als robustes Delay, um '0'-Werte durch zu frühes Lesen zu vermeiden.)
+  delay(200);
+
+  if (!this->read_data(raw, 5)) {
+    this->status_set_warning();
+    ESP_LOGE(TAG, "Error reading Number Concentration values (0x0316), err=%d", this->last_error_);
+    return false;
+  }
+
+  *nc05  = raw[0];
+  *nc10  = raw[1];
+  *nc25  = raw[2];
+  *nc40  = raw[3];
+  *nc100 = raw[4];
+
+  return true;
+}
+
+bool SEN5XComponent::start_measurement() {
+  if (!write_command(SEN5X_CMD_START_MEASUREMENTS)) {
+    this->status_set_warning();
+    ESP_LOGE(TAG, "write error start measurement (%d)", this->last_error_);
+    return false;
+  }
+  ESP_LOGD(TAG, "Measurement started");
+  this->is_measuring_ = true;
+  return true;
+}
+
+bool SEN5XComponent::stop_measurement() {
+  if (!write_command(SEN5X_CMD_STOP_MEASUREMENTS)) {
+    this->status_set_warning();
+    ESP_LOGE(TAG, "write error stop measurement (%d)", this->last_error_);
+    return false;
+  }
+  ESP_LOGD(TAG, "Measurement stopped");
+  this->is_measuring_ = false;
+  return true;
+}
+
+bool SEN5XComponent::start_fan_cleaning() {
+  if (!write_command(SEN5X_CMD_START_CLEANING_FAN)) {
+    this->status_set_warning();
+    ESP_LOGE(TAG, "write error start fan (%d)", this->last_error_);
+    return false;
+  }
+  ESP_LOGD(TAG, "Fan auto clean started");
+  return true;
+}
+
+}  // namespace sen6x
+}  // namespace esphome
