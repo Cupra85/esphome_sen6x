@@ -211,13 +211,19 @@ bool SEN5XComponent::start_measurement() {
 }
 
 bool SEN5XComponent::stop_measurement() {
-  if (!write_command(SEN5X_CMD_STOP_MEASUREMENTS)) {
-    this->status_set_warning();
-    ESP_LOGE(TAG, "write error stop measurement (%d)", this->last_error_);
-    return false;
-  }
+  if (!write_command(SEN5X_CMD_STOP_MEASUREMENTS)) return false;
   this->is_measuring_ = false;
-  ESP_LOGD(TAG, "Measurement stopped");
+
+  auto set_nan = [&](Sensor *s) {
+    if (s) s->publish_state(NAN);
+  };
+
+  set_nan(this->nc_0_5_sensor_);
+  set_nan(this->nc_1_0_sensor_);
+  set_nan(this->nc_2_5_sensor_);
+  set_nan(this->nc_4_0_sensor_);
+  set_nan(this->nc_10_0_sensor_);
+
   return true;
 }
 
