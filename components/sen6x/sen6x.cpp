@@ -54,10 +54,6 @@ void SEN5XComponent::setup() {
         this->mark_failed();
         return;
       }
-
-      // Datasheet: sensor needs 200 ms after reset before accepting new commands
-      delay(200);
-
       stop_measurement_delay = 1200;
     }
 
@@ -72,6 +68,7 @@ void SEN5XComponent::setup() {
       this->serial_number_[0] = static_cast<bool>(uint16_t(raw_serial_number[0]) & 0xFF);
       this->serial_number_[1] = static_cast<uint16_t>(raw_serial_number[0] & 0xFF);
       this->serial_number_[2] = static_cast<uint16_t>(raw_serial_number[1] >> 8);
+      ESP_LOGD(TAG, "Serial number %02d.%02d.%02d", serial_number_[0], serial_number_[1], serial_number_[2]);
 
       uint16_t raw_product_name[16];
       if (!this->get_register(SEN5X_CMD_GET_PRODUCT_NAME, raw_product_name, 16, 20)) {
@@ -97,17 +94,14 @@ void SEN5XComponent::setup() {
 
       ESP_LOGD(TAG, "Productname %s", product_name_.c_str());
 
-      // ⭐ Start measurement now
       if (!this->write_command(SEN5X_CMD_START_MEASUREMENTS)) {
         ESP_LOGE(TAG, "Error starting continuous measurements.");
         this->error_code_ = MEASUREMENT_INIT_FAILED;
         this->mark_failed();
         return;
       }
-
-      this->is_measuring_ = true;  // <<< FIXED
       initialized_ = true;
-      ESP_LOGD(TAG, "Sensor initialized and measuring");
+      ESP_LOGD(TAG, "Sensor initialized");
     });
   });
 }
@@ -125,8 +119,9 @@ void SEN5XComponent::dump_config() {
 void SEN5XComponent::update() {
   if (!initialized_) return;
 
-  // 🛑 If measurement stopped: publish NAN for all
+  // 🛑 Wenn Messung gestoppt: Alle Sensorwerte auf UNBEKANNT (NAN)
   if (!this->is_measuring_) {
+
     auto set_nan = [&](sensor::Sensor *s) {
       if (s != nullptr) s->publish_state(NAN);
     };
@@ -151,7 +146,7 @@ void SEN5XComponent::update() {
     return;
   }
 
-  // 🌡 Read standard measurements
+  // 🌡 Standard Measurement 0x0300
   if (!this->write_command(SEN5X_CMD_READ_MEASUREMENT)) {
     this->status_set_warning();
     ESP_LOGD(TAG, "write error read measurement (%d)", this->last_error_);
@@ -190,86 +185,4 @@ void SEN5XComponent::update() {
 
     this->status_clear_warning();
 
-    // 🧮 Number Concentration with 50 ms delay
-    this->set_timeout(50, [this]() {
-      uint16_t nc05_u, nc10_u, nc25_u, nc40_u, nc100_u;
-      if (!this->read_number_concentration(&nc05_u, &nc10_u, &nc25_u, &nc40_u, &nc100_u))
-        return;
-
-      auto conv = [](uint16_t v) -> float {
-        return (v == 0xFFFF) ? NAN : (float) v;
-      };
-
-      if (this->nc_0_5_sensor_) this->nc_0_5_sensor_->publish_state(conv(nc05_u));
-      if (this->nc_1_0_sensor_) this->nc_1_0_sensor_->publish_state(conv(nc10_u));
-      if (this->nc_2_5_sensor_) this->nc_2_5_sensor_->publish_state(conv(nc25_u));
-      if (this->nc_4_0_sensor_) this->nc_4_0_sensor_->publish_state(conv(nc40_u));
-      if (this->nc_10_0_sensor_) this->nc_10_0_sensor_->publish_state(conv(nc100_u));
-    });
-  });
-}
-
-// -----------------------------------------------------------------------------
-//                          FUNCTIONS
-// -----------------------------------------------------------------------------
-
-bool SEN5XComponent::read_number_concentration(uint16_t *nc05, uint16_t *nc10,
-                                               uint16_t *nc25, uint16_t *nc40,
-                                               uint16_t *nc100) {
-  uint16_t raw[5];
-
-  if (!this->write_command(SEN6X_CMD_READ_NUMBER_CONCENTRATION)) {
-    this->status_set_warning();
-    ESP_LOGE(TAG, "Error writing Number Concentration command (0x0316), err=%d", this->last_error_);
-    return false;
-  }
-
-  if (!this->read_data(raw, 5)) {
-    this->status_set_warning();
-    ESP_LOGE(TAG, "Error reading Number Concentration values (0x0316), err=%d", this->last_error_);
-    return false;
-  }
-
-  *nc05  = raw[0];
-  *nc10  = raw[1];
-  *nc25  = raw[2];
-  *nc40  = raw[3];
-  *nc100 = raw[4];
-
-  return true;
-}
-
-bool SEN5XComponent::start_measurement() {
-  if (!write_command(SEN5X_CMD_START_MEASUREMENTS)) {
-    this->status_set_warning();
-    ESP_LOGE(TAG, "write error start measurement (%d)", this->last_error_);
-    return false;
-  }
-  this->is_measuring_ = true;
-  ESP_LOGD(TAG, "Measurement started");
-  return true;
-}
-
-bool SEN5XComponent::stop_measurement() {
-  if (!write_command(SEN5X_CMD_STOP_MEASUREMENTS)) {
-    this->status_set_warning();
-    ESP_LOGE(TAG, "write error stop measurement (%d)", this->last_error_);
-    return false;
-  }
-  this->is_measuring_ = false;
-  ESP_LOGD(TAG, "Measurement stopped");
-  return true;
-}
-
-bool SEN5XComponent::start_fan_cleaning() {
-  if (!write_command(SEN5X_CMD_START_CLEANING_FAN)) {
-    this->status_set_warning();
-    ESP_LOGE(TAG, "write error start fan (%d)", this->last_error_);
-    return false;
-  }
-  ESP_LOGD(TAG, "Fan auto clean started");
-  return true;
-}
-
-}  // namespace sen6x
-}  // namespace esphome
+    // 🧮 Number Concentr
